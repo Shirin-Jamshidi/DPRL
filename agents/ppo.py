@@ -45,9 +45,11 @@ class PPOAgent(RLAgent):
         obs = torch.FloatTensor(np.array(obs)).to(self.device)
         actions = torch.FloatTensor(np.array(actions)).to(self.device)
         old_log_probs = torch.FloatTensor(np.array(old_log_probs)).to(self.device)
-        old_log_probs = old_log_probs.view(-1)
-        returns = returns.view(-1)
 
+        old_log_probs = old_log_probs.view(-1)
+
+
+        returns = []
         G = 0
         for r, d in zip(reversed(rewards), reversed(dones)):
             G = r + self.gamma * G * (1 - d)
@@ -61,7 +63,8 @@ class PPOAgent(RLAgent):
 
             ratio = torch.exp(new_log_probs - old_log_probs)
 
-            advantages = returns - self.critic(obs).squeeze().detach()
+            values = self.critic(obs).squeeze()
+            advantages = returns - values.detach()
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
             surr1 = ratio * advantages
