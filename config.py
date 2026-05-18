@@ -1,5 +1,5 @@
 config = {
-    "algo": "ppo",  # change to "td3"
+    "algo": "td3",  # change to "td3"
     "env_name": "Pendulum-v1",
     "total_steps": 200000,
     "update_freq": 2048,
