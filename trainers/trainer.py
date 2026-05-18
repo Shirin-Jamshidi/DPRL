@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 from agents.factory import build_agent
 
 
