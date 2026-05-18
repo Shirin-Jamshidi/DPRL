@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.optim as optim
 from agents.base import RLAgent
@@ -28,7 +29,12 @@ class PPOAgent(RLAgent):
         action = dist.sample()
         log_prob = dist.log_prob(action).sum(-1)
 
-        return action.detach().cpu().numpy(), log_prob.detach().cpu().numpy()
+        
+        return (
+            action.detach().cpu().numpy(),
+            log_prob.detach().cpu().item()  # ✅ scalar float
+        )
+
 
     def store(self, transition):
         self.buffer.add(*transition)
@@ -36,11 +42,12 @@ class PPOAgent(RLAgent):
     def update(self):
         obs, actions, rewards, dones, old_log_probs = self.buffer.get()
 
-        obs = torch.FloatTensor(obs).to(self.device)
-        actions = torch.FloatTensor(actions).to(self.device)
-        old_log_probs = torch.FloatTensor(old_log_probs).to(self.device)
+        obs = torch.FloatTensor(np.array(obs)).to(self.device)
+        actions = torch.FloatTensor(np.array(actions)).to(self.device)
+        old_log_probs = torch.FloatTensor(np.array(old_log_probs)).to(self.device)
+        old_log_probs = old_log_probs.view(-1)
+        returns = returns.view(-1)
 
-        returns = []
         G = 0
         for r, d in zip(reversed(rewards), reversed(dones)):
             G = r + self.gamma * G * (1 - d)
@@ -55,6 +62,7 @@ class PPOAgent(RLAgent):
             ratio = torch.exp(new_log_probs - old_log_probs)
 
             advantages = returns - self.critic(obs).squeeze().detach()
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 0.8, 1.2) * advantages
